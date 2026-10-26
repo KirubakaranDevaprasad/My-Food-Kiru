@@ -368,7 +368,7 @@ let cuisines=store.get("fa.cui",["Chinese","Vietnamese","Japanese","Farm"]);
 let likes=store.get("fa.likes",{}); // key -> 1 | -1
 let hist=store.get("fa.hist",[]);
 let pics=store.get("fa.pics.v1",{});
-let geoCache=store.get("fa.geo.v1",{});
+let geoCache=store.get("fa.geo.v2",{});
 let spots=[], drive={}, sortBy="match", watchId=null, lastFetchAt=null;
 
 const BASE_W={Chinese:.8,Vietnamese:.8,Japanese:.8,Farm:.55,Fusion:.6};
@@ -419,14 +419,17 @@ function fromOSM(e){
     hours:t.opening_hours||"",web:t.website||t["contact:website"]||"",take:/yes|only/.test(t.takeaway||"")||am==="fast_food",amenity:am,wifi:/yes|wlan|free/.test(t.internet_access||""),cu:t.cuisine||"",src:"OpenStreetMap"};
 }
 function seedSpots(){
-  return SEED.map(s=>{const g=geoCache[s.addr];const tc=TOWNS[s.town]||[HOME.lat,HOME.lng];
+  return SEED.map(s=>{const g=geoCache[s.name];const tc=TOWNS[s.town]||[HOME.lat,HOME.lng];
     return {id:"seed-"+s.name,name:s.name,c:s.c,lat:g?g[0]:tc[0],lng:g?g[1]:tc[1],approx:!g,addr:s.addr,town:s.town,p:s.p,veg:!!s.veg,vegOnly:!!s.veg,farm:!!s.farm,isNew:!!s.isNew,why:s.why,src:"Kiru's starter list",hours:"",web:"",take:s.p===1,amenity:s.p===1?"fast_food":"restaurant"}});
 }
 async function geocodeSeeds(){
-  for(const s of SEED){ if(geoCache[s.addr]||!/\d/.test(s.addr))continue;
-    try{const j=await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=${encodeURIComponent(s.addr)}`).then(r=>r.json());
-      if(j[0]){geoCache[s.addr]=[+j[0].lat,+j[0].lon];store.set("fa.geo.v1",geoCache)}}catch(e){}
-    await new Promise(r=>setTimeout(r,1100));
+  for(const s of SEED){ if(geoCache[s.name])continue;
+    const qs=/\d/.test(s.addr)?[s.addr,s.name+", "+s.addr]:[s.name+", "+s.addr];
+    for(const q of qs){
+      try{const j=await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=${encodeURIComponent(q)}`).then(r=>r.json());
+        if(j[0]){geoCache[s.name]=[+j[0].lat,+j[0].lon];store.set("fa.geo.v2",geoCache);await new Promise(r=>setTimeout(r,1100));break}}catch(e){}
+      await new Promise(r=>setTimeout(r,1100));
+    }
   }
 }
 
@@ -440,13 +443,13 @@ async function load(){
   spots=live.concat(seeds.filter(s=>!names.has(s.name.toLowerCase())));
   lastFetchAt=new Date();
   if(err&&!spots.length) setStatus("err",`The open map servers are busy right now, so no live spots loaded.`,true);
-  else if(err) setStatus("warn",`Showing your starter list. Live map data is busy; tap retry for more spots.`,true);
-  else setStatus("ok",`${live.length} live spots from OpenStreetMap${seeds.length?` + ${seeds.length} starter picks`:""} within ${radius} mi of ${origin.label}.`);
+  else if(err){ setStatus("warn",`Showing your starter list. Live map data is busy; trying again in 20 seconds.`,true); if(!load._retried){load._retried=true;setTimeout(()=>load(),20000)} }
+  else{ load._retried=false; setStatus("ok",`${live.length} live spots from OpenStreetMap${seeds.length?` + ${seeds.length} starter picks`:""} within ${radius} mi of ${origin.label}.`);}
   await route(); renderAll();
 }
 async function route(){
   drive={};
-  const list=spots.filter(s=>hav(origin,s)<=radius+2).sort((a,b)=>hav(origin,a)-hav(origin,b)).slice(0,60);
+  const list=spots.filter(s=>!s.approx&&hav(origin,s)<=radius+2).sort((a,b)=>hav(origin,a)-hav(origin,b)).slice(0,60);
   if(!list.length)return;
   const coords=[`${origin.lng},${origin.lat}`].concat(list.map(s=>`${s.lng},${s.lat}`)).join(";");
   try{const j=await fetch(`https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=duration,distance`).then(r=>r.json());
@@ -521,7 +524,7 @@ function spotCard(s,P){const st=spotStats(s),d=dishFor(s),m=score(s,P),L=likes["
     <div class="tags">${s.isNew?'<span class="tag new">New</span>':""}${s.farm?'<span class="tag farm">Farm-to-table</span>':""}${s.vegOnly?'<span class="tag veg">All veg</span>':s.veg?'<span class="tag veg">Veg-friendly</span>':""}${s.p===1?'<span class="tag cheap">Budget</span>':""}</div></div>
    <div class="bd"><h3>${esc(s.name)}</h3><div class="meta">${s.c.map(c=>`<b style="color:${CZ[c]}">${c}</b>`).join(" · ")} · ${price}${s.town?" · "+esc(s.town):""}</div>
    ${s.why?`<p class="why">${esc(s.why)}</p>`:s.cu?`<p class="why">Serves: ${esc(s.cu.replace(/;/g,", ").replace(/_/g," "))}</p>`:""}
-   <div class="dist"><span class="drv">🚗 ${st.est?"~":""}${st.dmin} min · ${st.mi.toFixed(1)} mi</span>${st.wmin<=45?`<span class="wlk">🚶 ~${st.wmin} min</span>`:""}</div>
+   <div class="dist">${s.approx?`<span class="drv">📍 In ${esc(s.town)} · ~${Math.max(1,Math.round(hav(origin,s)))} mi</span>`:`<span class="drv">🚗 ${st.est?"~":""}${st.dmin} min · ${st.mi.toFixed(1)} mi</span>${st.wmin<=45?`<span class="wlk">🚶 ~${st.wmin} min</span>`:""}`}</div>
    <div class="acts"><a class="btn sm jade" href="${mapsUrl(s)}" target="_blank" rel="noopener">Directions</a>${s.web?`<a class="btn sm" href="${esc(s.web)}" target="_blank" rel="noopener">Menu</a>`:""}
     <button class="btn sm" data-like="s:${esc(s.id)}" data-v="1" aria-pressed="${L===1}">😋</button><button class="btn sm" data-like="s:${esc(s.id)}" data-v="-1" aria-pressed="false" aria-label="Hide this spot">🙅</button></div>
    <div class="src">${s.approx?"Approximate location · ":""}${esc(s.src)}</div></div></article>`}
@@ -533,7 +536,7 @@ function renderAll(){
   $("#trackDish").innerHTML=ds.concat(ds).map(dishCard).join("");
   $("#trackSip").innerHTML=DISHES.filter(d=>d.t).sort((a,b)=>dishScore(b,P)-dishScore(a,P)).map(dishCard).join("");
   const ok=spots.filter(passes);
-  const near=[...ok].sort((a,b)=>spotStats(a).dmin-spotStats(b).dmin).slice(0,14);
+  const near=[...ok].sort((a,b)=>(a.approx-b.approx)||spotStats(a).dmin-spotStats(b).dmin).slice(0,14);
   $("#trackNear").innerHTML=near.length?near.map(s=>spotCard(s,P)).join(""):`<div class="empty">No spots match yet. Widen the radius or tap more cuisines.</div>`;
   const nw=ok.filter(s=>s.isNew||s.p===1).sort((a,b)=>(b.isNew-a.isNew)||score(b,P)-score(a,P)).slice(0,14);
   $("#trackNew").innerHTML=nw.length?nw.map(s=>spotCard(s,P)).join(""):`<div class="empty">No new or $ spots in range.</div>`;
@@ -662,7 +665,7 @@ $("#locBtn").addEventListener("click",()=>{
   function step(){if(!paused&&t.scrollWidth>t.clientWidth){t.style.scrollBehavior="auto";t.scrollLeft+=0.6;if(t.scrollLeft>=t.scrollWidth/2)t.scrollLeft=0;t.style.scrollBehavior=""}requestAnimationFrame(step)}
   requestAnimationFrame(step)})();
 
-syncSegs();spots=seedSpots();renderAll();loadPics();load();geocodeSeeds().then(()=>{if(origin===HOME){spots=spots.map(s=>{if(!s.id.startsWith("seed-"))return s;const g=geoCache[s.addr];return g?{...s,lat:g[0],lng:g[1],approx:false}:s});route().then(renderAll)}});
+syncSegs();spots=seedSpots();renderAll();loadPics();load();geocodeSeeds().then(()=>{if(origin===HOME){spots=spots.map(s=>{if(!s.id.startsWith("seed-"))return s;const g=geoCache[s.name];return g?{...s,lat:g[0],lng:g[1],approx:false}:s});route().then(renderAll)}});
 })();
 </script>
 </body>
