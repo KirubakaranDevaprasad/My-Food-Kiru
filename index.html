@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kiru's Food App</title>
+<meta name="description" content="Kiru's personal food finder: Chinese, Vietnamese and Japanese spots near wherever he is, new openings, budget picks, farm-to-table, veg and non-veg, with a taste profile that learns.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Outfit:wght@300;400;600;800&family=Space+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: a bright night-market stall. Lantern-red header strip, a search counter with chopstick-quick filters, then sliding trays (rails) of dishes and spots, ending at the "Taste DNA" ledger. Light by design. */
+:root{
+  --rice:#f7f9f6; --paper:#ffffff; --steam:#eef3ef; --line:#dbe4dd;
+  --ink:#17241e; --ink-2:#4a5b52; --ink-3:#7d8d84;
+  --chili:#e2412b; --jade:#14936a; --saffron:#f0a92b; --shiso:#7b4fd0; --sky:#2a8bd6;
+  --display:"Bagel Fat One","Arial Rounded MT Bold",system-ui,sans-serif;
+  --body:"Outfit",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Space Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--rice);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;overflow-x:hidden}
+img{max-width:100%}
+[hidden]{display:none!important}
+a{color:var(--jade)}
+button{font-family:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--sky);outline-offset:2px;border-radius:8px}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1200px;margin:0 auto}
+
+/* Lantern strip */
+.top{background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:12px;flex-wrap:wrap}
+.logo{font:400 26px var(--display);letter-spacing:.01em;color:var(--chili);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.logo i{font-style:normal;color:var(--ink)}
+.lanterns{display:flex;gap:4px}.lanterns span{width:10px;height:14px;border-radius:50%;background:var(--chili);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15);animation:sway 3s ease-in-out infinite;transform-origin:top}
+.lanterns span:nth-child(2){background:var(--saffron);animation-delay:.4s}.lanterns span:nth-child(3){background:var(--jade);animation-delay:.8s}
+@keyframes sway{50%{transform:rotate(8deg)}}
+.locpill{margin-left:auto;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 12px;background:var(--steam);min-width:0;max-width:100%}
+.locpill .dot{width:9px;height:9px;border-radius:50%;background:var(--ink-3);flex:none}
+.locpill .dot.live{background:var(--jade);animation:ping 1.6s infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(20,147,106,.5)}100%{box-shadow:0 0 0 10px rgba(20,147,106,0)}}
+.locpill span{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+/* buttons */
+.btn{font:600 14px var(--body);border-radius:999px;padding:9px 16px;border:1.5px solid var(--line);background:var(--paper);cursor:pointer;display:inline-flex;align-items:center;gap:7px;text-decoration:none;color:var(--ink);transition:transform .15s,box-shadow .15s,background .15s,border-color .15s;white-space:nowrap}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px -6px rgba(23,36,30,.25);border-color:var(--ink-3)}
+.btn:active{transform:translateY(0) scale(.97)}
+.btn.chili{background:var(--chili);border-color:var(--chili);color:#fff}
+.btn.jade{background:var(--jade);border-color:var(--jade);color:#fff}
+.btn.sm{padding:6px 11px;font-size:13px}
+.btn[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+
+/* Counter (hero) */
+.counter{padding-block:28px 10px}
+.hello{font:400 clamp(34px,6vw,64px)/1 var(--display);margin:0 0 10px;letter-spacing:.005em;text-wrap:balance}
+.hello em{font-style:normal;color:var(--chili)}
+.sub{color:var(--ink-2);margin:0 0 18px;max-width:62ch;font-size:16px}
+.searchbox{position:relative;max-width:720px}
+.search{width:100%;font:400 18px var(--body);padding:16px 130px 16px 48px;border-radius:18px;border:2px solid var(--ink);background:var(--paper);box-shadow:6px 6px 0 var(--saffron);color:var(--ink)}
+.search::placeholder{color:var(--ink-3)}
+.searchbox .mag{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:20px;height:20px}
+.searchbox .go{position:absolute;right:8px;top:50%;transform:translateY(-50%)}
+.suggest{position:absolute;left:0;right:0;top:calc(100% + 8px);background:var(--paper);border:1.5px solid var(--line);border-radius:16px;box-shadow:0 20px 40px -16px rgba(23,36,30,.3);z-index:30;max-height:340px;overflow-y:auto;padding:6px}
+.sg{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer}
+.sg[aria-selected="true"],.sg:hover{background:var(--steam)}
+.sg img,.sg .ph{width:38px;height:38px;border-radius:8px;object-fit:cover;flex:none;background:var(--steam)}
+.sg .k{font:700 10px var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin-left:auto}
+.sg b{font-weight:600}
+
+.modes{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}
+.mode{font:600 14px var(--body);border-radius:14px;padding:10px 14px;border:1.5px solid var(--line);background:var(--paper);cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s}
+.mode .ic{font-size:18px}
+.mode:hover{border-color:var(--ink-3);transform:translateY(-2px)}
+.mode[aria-pressed="true"]{background:#fff4e0;border-color:var(--saffron);box-shadow:0 0 0 3px rgba(240,169,43,.25)}
+.mlab{font:700 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:22px 0 8px}
+
+.filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:6px}
+@media(max-width:860px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:460px){.filters{grid-template-columns:1fr}}
+.fbox{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:12px}
+.fbox h4{margin:0 0 8px;font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:600 13px var(--body);padding:7px 11px;border-radius:10px;border:1.5px solid var(--line);background:var(--rice);cursor:pointer;transition:.15s}
+.seg button:hover{border-color:var(--ink-3)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.seg button.veg[aria-pressed="true"]{background:var(--jade);border-color:var(--jade)}
+.seg button.nv[aria-pressed="true"]{background:var(--chili);border-color:var(--chili)}
+input[type=range]{width:100%;accent-color:var(--chili)}
+.rv{font:700 18px var(--mono)}
+
+/* Rails */
+.rail{margin-top:34px}
+.rhead{display:flex;align-items:end;gap:12px;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+.rhead h2{font:400 clamp(22px,3vw,30px)/1.1 var(--display);margin:0}
+.rhead p{margin:4px 0 0;color:var(--ink-2);font-size:14px}
+.arrows{display:flex;gap:6px}
+.arrows button{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--line);background:var(--paper);cursor:pointer;font-size:18px;transition:.15s}
+.arrows button:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+.track{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 2px 14px;scrollbar-width:thin;scrollbar-color:var(--chili) var(--steam);scroll-behavior:smooth}
+.track::-webkit-scrollbar{height:10px}
+.track::-webkit-scrollbar-track{background:var(--steam);border-radius:999px}
+.track::-webkit-scrollbar-thumb{background:linear-gradient(90deg,var(--chili),var(--saffron));border-radius:999px}
+.track>*{scroll-snap-align:start;flex:none}
+.empty{padding:28px;border:2px dashed var(--line);border-radius:16px;color:var(--ink-3);text-align:center;width:100%;flex:1}
+
+/* dish cards */
+.dish{width:230px;background:var(--paper);border-radius:20px;overflow:hidden;border:1px solid var(--line);transition:transform .25s,box-shadow .25s;position:relative}
+.dish:hover{transform:translateY(-6px) rotate(-.6deg);box-shadow:0 18px 36px -16px rgba(23,36,30,.35)}
+.dish .img{height:170px;background:var(--steam);position:relative;overflow:hidden}
+.dish .img img{width:100%;height:100%;object-fit:cover;transition:transform .5s,opacity .5s;opacity:0}
+.dish .img img.ok{opacity:1}
+.dish:hover .img img{transform:scale(1.08)}
+.dish .img .emo{position:absolute;inset:0;display:grid;place-items:center;font-size:54px}
+.tag{font:700 10px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:6px;background:var(--paper);color:var(--ink)}
+.tag.veg{background:var(--jade);color:#fff}.tag.nv{background:var(--chili);color:#fff}.tag.both{background:var(--saffron);color:#2b1a00}
+.tag.new{background:var(--shiso);color:#fff}.tag.farm{background:#2f7d32;color:#fff}.tag.cheap{background:#fff4e0;color:#7a4b00}
+.dish .tags{position:absolute;top:10px;left:10px;display:flex;gap:5px;flex-wrap:wrap;z-index:1}
+.dish .bd{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px}
+.dish h3{margin:0;font-size:17px;line-height:1.2}
+.dish .cz{font:700 11px var(--mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
+.dish p{margin:0;font-size:13px;color:var(--ink-2)}
+.flav{display:flex;gap:4px;flex-wrap:wrap}.flav span{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--steam);color:var(--ink-2)}
+.react{display:flex;gap:6px;margin-top:4px}
+.react button{flex:1;border:1.5px solid var(--line);background:var(--rice);border-radius:10px;padding:6px 0;cursor:pointer;font:600 13px var(--body);transition:.15s}
+.react button:hover{transform:scale(1.04)}
+.react .yum[aria-pressed="true"]{background:var(--jade);color:#fff;border-color:var(--jade)}
+.react .nah[aria-pressed="true"]{background:var(--ink-3);color:#fff;border-color:var(--ink-3)}
+.react .find{background:var(--paper)}
+.auto .track{scroll-snap-type:none}
+
+/* spot cards */
+.spot{width:300px;background:var(--paper);border:1px solid var(--line);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s}
+.spot:hover{transform:translateY(-4px);box-shadow:0 18px 36px -18px rgba(23,36,30,.35)}
+.spot .ban{height:110px;position:relative;background:var(--steam);overflow:hidden}
+.spot .ban img{width:100%;height:100%;object-fit:cover;filter:saturate(1.1);opacity:0;transition:opacity .5s}
+.spot .ban img.ok{opacity:1}
+.spot .ban .tags{position:absolute;left:10px;bottom:10px;display:flex;gap:5px;flex-wrap:wrap}
+.spot .match{position:absolute;right:10px;top:10px;background:var(--paper);border-radius:12px;padding:4px 9px;font:700 13px var(--mono);box-shadow:0 4px 10px rgba(0,0,0,.12)}
+.spot .bd{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;flex:1}
+.spot h3{margin:0;font-size:18px;line-height:1.2}
+.spot .meta{font-size:13px;color:var(--ink-2)}
+.spot .why{font-size:13px;color:var(--ink-2);margin:0}
+.dist{display:flex;gap:10px;flex-wrap:wrap;font:700 12px var(--mono)}
+.dist span{padding:4px 8px;border-radius:8px;background:var(--steam)}
+.dist .drv{color:var(--sky)}.dist .wlk{color:var(--jade)}
+.spot .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.src{font:10px var(--mono);color:var(--ink-3)}
+
+/* All spots grid */
+.gridhead{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.sortsel{font:600 14px var(--body);padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--paper)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.grid .spot{width:auto}
+.status{font-size:13.5px;color:var(--ink-2);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.status .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--chili);border-radius:50%;animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* Taste DNA */
+.dna{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media(max-width:900px){.dna{grid-template-columns:1fr}}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:16px;min-width:0}
+.panel h3{margin:0 0 4px;font-size:16px}
+.panel>p{margin:0 0 12px;font-size:13px;color:var(--ink-3)}
+.donut{width:150px;height:150px;border-radius:50%;position:relative;flex:none}
+.donut::after{content:attr(data-c);position:absolute;inset:30px;border-radius:50%;background:var(--paper);display:grid;place-items:center;font:700 13px var(--mono);text-align:center;color:var(--ink-2);white-space:pre}
+.dwrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.legend{display:grid;gap:5px;font-size:13px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
+.legend span{font:12px var(--mono);color:var(--ink-3);margin-left:4px}
+.hb{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr) 40px;gap:8px;align-items:center;font-size:13px;margin-bottom:7px}
+.hb .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)}
+.hb .tr{height:10px;border-radius:999px;background:var(--steam);overflow:hidden}
+.hb .fl{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--saffron),var(--chili));transition:width .5s}
+.hb .v{font:700 12px var(--mono);text-align:right;color:var(--ink-3)}
+.hist{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto}
+.hist div{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 8px;border-radius:8px;background:var(--rice)}
+.hist span{font:11px var(--mono);color:var(--ink-3);white-space:nowrap}
+
+/* Surprise wheel */
+dialog{border:0;padding:0;background:transparent;max-width:min(560px,calc(100vw - 24px));width:100%}
+dialog::backdrop{background:rgba(23,36,30,.45);backdrop-filter:blur(4px)}
+.sbox{background:var(--paper);border-radius:26px;padding:22px;text-align:center;box-shadow:0 30px 80px -20px rgba(23,36,30,.5);position:relative}
+.wheel{width:220px;height:220px;margin:4px auto 16px;border-radius:50%;position:relative;border:6px solid var(--ink);transition:transform 2.6s cubic-bezier(.17,.67,.2,1)}
+.wheel::after{content:"";position:absolute;inset:38%;border-radius:50%;background:var(--paper);border:4px solid var(--ink)}
+.pointer{width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:24px solid var(--chili);margin:0 auto -8px;position:relative;z-index:1}
+.reveal{opacity:0;transform:translateY(10px);transition:.4s}
+.reveal.on{opacity:1;transform:none}
+.reveal img{width:100%;height:180px;object-fit:cover;border-radius:16px;background:var(--steam)}
+.reveal h3{font:400 28px/1.1 var(--display);margin:12px 0 4px}
+.xbtn{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:1.5px solid var(--line);background:var(--paper);cursor:pointer;font-size:18px}
+
+.note{margin-top:30px;font-size:13px;color:var(--ink-3);max-width:85ch}
+footer{margin:22px 0 40px;font:12px var(--mono);color:var(--ink-3)}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(30px);opacity:0;z-index:60;background:var(--ink);color:#fff;font-weight:600;padding:10px 16px;border-radius:12px;transition:.3s;pointer-events:none;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top gut">
+  <div class="wrap">
+    <div class="logo"><span class="lanterns" aria-hidden="true"><span></span><span></span><span></span></span>Kiru's <i>Food App</i></div>
+    <div class="locpill"><i class="dot" id="dot"></i><span id="locText">Near Parsippany, NJ</span>
+      <button class="btn sm jade" id="locBtn">Use my location</button></div>
+  </div>
+</header>
+
+<main class="gut">
+ <div class="wrap">
+  <section class="counter">
+    <h1 class="hello">Hungry, <em>Kiru?</em></h1>
+    <p class="sub">Chinese, Vietnamese and Japanese spots near wherever you are, plus new openings, budget picks, farm-to-table, and dishes you haven't tried yet. Tap 😋 or 🙅 and the picks learn what you like.</p>
+    <div class="searchbox">
+      <svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input class="search" id="q" type="search" autocomplete="off" placeholder="Try “pho”, “spicy”, “bubble tea”, “veg”…" aria-label="Search dishes, cuisines and spots" role="combobox" aria-expanded="false" aria-controls="suggest" aria-autocomplete="list">
+      <button class="btn chili go" id="surpriseBtn">🎲 Surprise me</button>
+      <div class="suggest" id="suggest" role="listbox" hidden></div>
+    </div>
+
+    <div class="mlab">What are you doing right now?</div>
+    <div class="modes" id="modes"></div>
+
+    <div class="mlab">Dial it in</div>
+    <div class="filters">
+      <div class="fbox"><h4>Eating</h4><div class="seg" id="vegSeg">
+        <button data-veg="both" aria-pressed="true">Both</button><button class="veg" data-veg="veg">🥬 Veg</button><button class="nv" data-veg="nonveg">🍗 Non-veg</button></div></div>
+      <div class="fbox"><h4>Budget up to</h4><div class="seg" id="budSeg">
+        <button data-b="1">$</button><button data-b="2" aria-pressed="true">$$</button><button data-b="3">$$$</button></div></div>
+      <div class="fbox"><h4>Cuisine</h4><div class="seg" id="cuiSeg">
+        <button data-c="Chinese" aria-pressed="true">🥟 Chinese</button><button data-c="Vietnamese" aria-pressed="true">🍜 Vietnamese</button><button data-c="Japanese" aria-pressed="true">🍣 Japanese</button><button data-c="Farm" aria-pressed="true">🌱 Farm</button></div></div>
+      <div class="fbox"><h4>Within <span class="rv" id="radV">10</span> mi</h4><input type="range" id="rad" min="1" max="20" step="1" value="10" aria-label="Search radius in miles"></div>
+    </div>
+    <div class="status" id="status"><i class="spin"></i><span>Loading spots near you…</span></div>
+  </section>
+
+  <section class="rail auto" id="railDish">
+    <div class="rhead"><div><h2>Flavors to try next</h2><p>Signature and inventive dishes, ranked for your taste. Rolls on its own; hover or touch to stop.</p></div>
+      <div class="arrows"><button data-scroll="trackDish" data-d="-1" aria-label="Scroll left">←</button><button data-scroll="trackDish" data-d="1" aria-label="Scroll right">→</button></div></div>
+    <div class="track" id="trackDish"></div>
+  </section>
+
+  <section class="rail">
+    <div class="rhead"><div><h2>Closest to you right now</h2><p>Sorted by drive time from where you are.</p></div>
+      <div class="arrows"><button data-scroll="trackNear" data-d="-1" aria-label="Scroll left">←</button><button data-scroll="trackNear" data-d="1" aria-label="Scroll right">→</button></div></div>
+    <div class="track" id="trackNear"></div>
+  </section>
+
+  <section class="rail">
+    <div class="rhead"><div><h2>New, cheap & cheerful</h2><p>Recent openings and $ spots that fit a solo meal.</p></div>
+      <div class="arrows"><button data-scroll="trackNew" data-d="-1" aria-label="Scroll left">←</button><button data-scroll="trackNew" data-d="1" aria-label="Scroll right">→</button></div></div>
+    <div class="track" id="trackNew"></div>
+  </section>
+
+  <section class="rail">
+    <div class="rhead"><div><h2>Farm-to-table & veg-forward</h2><p>Seasonal, local, organic, or plant-based kitchens.</p></div>
+      <div class="arrows"><button data-scroll="trackFarm" data-d="-1" aria-label="Scroll left">←</button><button data-scroll="trackFarm" data-d="1" aria-label="Scroll right">→</button></div></div>
+    <div class="track" id="trackFarm"></div>
+  </section>
+
+  <section class="rail">
+    <div class="rhead"><div><h2>Sips & sweets</h2><p>Bubble tea, matcha, Vietnamese coffee and more.</p></div>
+      <div class="arrows"><button data-scroll="trackSip" data-d="-1" aria-label="Scroll left">←</button><button data-scroll="trackSip" data-d="1" aria-label="Scroll right">→</button></div></div>
+    <div class="track" id="trackSip"></div>
+  </section>
+
+  <section class="rail">
+    <div class="rhead gridhead"><div><h2>Every spot that fits</h2><p id="allSub">Matched to your filters and taste.</p></div>
+      <select class="sortsel" id="sort" aria-label="Sort spots"><option value="match">Best match</option><option value="drive">Closest</option><option value="price">Cheapest</option><option value="name">A–Z</option></select></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="rail">
+    <div class="rhead"><div><h2>Your Taste DNA</h2><p>Built from your stated favourites plus every 😋 and 🙅. It shapes every match score on this page.</p></div>
+      <button class="btn sm" id="resetTaste">Reset what it learned</button></div>
+    <div class="dna">
+      <div class="panel"><h3>Cuisine leanings</h3><p>Weight given to each cuisine</p><div class="dwrap"><div class="donut" id="donut"></div><div class="legend" id="legend"></div></div></div>
+      <div class="panel"><h3>Flavors you go for</h3><p>From the dishes you liked</p><div id="flavors"></div></div>
+      <div class="panel"><h3>Recently</h3><p>Your likes, passes and modes</p><div class="hist" id="hist"></div></div>
+    </div>
+  </section>
+
+  <p class="note">Spots come from OpenStreetMap wherever you are, plus a hand-picked starter list around Parsippany and Morristown. Prices marked "est." are inferred from the type of place, and new openings show only where the map records an opening date. Drive times use OpenStreetMap routing without live traffic; walk times are estimates. Dish photos come from Wikipedia. Your likes and settings stay in this browser.</p>
+  <footer>Built for Kirubakaran Devaprasad · <a href="https://kirubakarandevaprasad.github.io/Kirubakaran-Devaprasad-Portfolio/#work">part of my personal projects</a></footer>
+ </div>
+</main>
+
+<dialog id="sdlg" aria-labelledby="sTitle"><div class="sbox">
+  <button class="xbtn" id="sClose" aria-label="Close">×</button>
+  <div class="pointer" aria-hidden="true"></div><div class="wheel" id="wheel" aria-hidden="true"></div>
+  <div class="reveal" id="reveal"></div>
+</div></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+const HOME={lat:40.8576,lng:-74.4259,label:"Parsippany, NJ"};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2200)};
+const CZ={Chinese:"#e2412b",Vietnamese:"#14936a",Japanese:"#7b4fd0",Farm:"#2f7d32",Fusion:"#f0a92b"};
+const CEMO={Chinese:"🥟",Vietnamese:"🍜",Japanese:"🍣",Farm:"🌱",Fusion:"✨"};
+
+// ── Dishes (images from Wikipedia) ──
+const DISHES=[
+ {n:"Xiaolongbao",w:"Xiaolongbao",c:"Chinese",v:"nonveg",f:["umami","soupy"],note:"Soup dumplings. Bite a hole, sip the broth, then eat. Some spots now do truffle or crab versions."},
+ {n:"Mapo tofu",w:"Mapo tofu",c:"Chinese",v:"both",f:["spicy","numbing"],note:"Sichuan peppercorn tingle. Ask for the mushroom version if you're going veg."},
+ {n:"Dan dan noodles",w:"Dandan noodles",c:"Chinese",v:"nonveg",f:["spicy","nutty"],note:"Chili oil, sesame and crispy pork. Mix hard before the first bite."},
+ {n:"Peking duck",w:"Peking duck",c:"Chinese",v:"nonveg",f:["crispy","rich"],note:"Lacquered skin in thin pancakes. A treat-yourself order."},
+ {n:"Scallion pancake",w:"Scallion pancake",c:"Chinese",v:"veg",f:["crispy","savory"],note:"Flaky, layered, cheap. Newer kitchens wrap it around beef or egg."},
+ {n:"Char siu bao",w:"Cha siu bao",c:"Chinese",v:"nonveg",f:["sweet","savory"],note:"Fluffy dim sum bun with barbecue pork."},
+ {n:"Pho",w:"Pho",c:"Vietnamese",v:"both",f:["soupy","herby"],note:"Slow beef broth, rice noodles, herbs on the side. Many spots offer a veggie broth."},
+ {n:"Bánh mì",w:"Bánh mì",c:"Vietnamese",v:"both",f:["crunchy","fresh"],note:"Crackly baguette, pickles, pâté. A lemongrass tofu version is a great veg pick."},
+ {n:"Bún chả",w:"Bún chả",c:"Vietnamese",v:"nonveg",f:["smoky","fresh"],note:"Grilled pork with noodles to dip. Hanoi's lunch classic."},
+ {n:"Gỏi cuốn",w:"Gỏi cuốn",c:"Vietnamese",v:"both",f:["fresh","light"],note:"Fresh summer rolls with peanut dip. Light enough for a walk-around day."},
+ {n:"Bánh xèo",w:"Bánh xèo",c:"Vietnamese",v:"nonveg",f:["crispy","herby"],note:"Sizzling turmeric crepe. Wrap pieces in lettuce and herbs."},
+ {n:"Ramen",w:"Ramen",c:"Japanese",v:"both",f:["umami","soupy"],note:"Tonkotsu, shoyu or miso. Look for vegan miso or tantanmen if you're skipping meat."},
+ {n:"Okonomiyaki",w:"Okonomiyaki",c:"Japanese",v:"nonveg",f:["savory","smoky"],note:"Savory cabbage pancake with mayo and bonito that dance on top."},
+ {n:"Takoyaki",w:"Takoyaki",c:"Japanese",v:"nonveg",f:["molten","savory"],note:"Octopus balls, molten inside. Street-food energy."},
+ {n:"Onigiri",w:"Onigiri",c:"Japanese",v:"both",f:["simple","umami"],note:"Rice ball for the road. Umeboshi and kombu are veg; salmon is the classic."},
+ {n:"Japanese curry",w:"Japanese curry",c:"Japanese",v:"both",f:["comfort","mild"],note:"Thick, sweet-savory curry. Katsu on top, or vegetable for veg."},
+ {n:"Hand roll (temaki)",w:"Temaki",c:"Japanese",v:"both",f:["fresh","crispy"],note:"Hand-roll bars are the new wave: eat each roll the second it's made so the nori stays crisp."},
+ {n:"Gua bao",w:"Gua bao",c:"Fusion",v:"both",f:["soft","sweet"],note:"Pillowy folded bun. Modern spots stuff it with fried tofu, pork belly or crispy chicken."},
+ {n:"Sushi burrito",w:"Sushi burrito",c:"Fusion",v:"both",f:["fresh","big"],note:"Sushi rolled burrito-size. An inventive one-hand lunch when you're on the move."},
+ {n:"Bubble tea",w:"Bubble tea",c:"Fusion",v:"veg",f:["sweet","chewy"],t:"sip",note:"Brown-sugar tiger milk or a fruit tea with jellies."},
+ {n:"Matcha latte",w:"Matcha",c:"Japanese",v:"veg",f:["earthy","creamy"],t:"sip",note:"Ceremonial-grade matcha. Try it iced with oat milk."},
+ {n:"Vietnamese iced coffee",w:"Vietnamese iced coffee",c:"Vietnamese",v:"veg",f:["strong","sweet"],t:"sip",note:"Phin-dripped coffee over condensed milk. A road-trip fuel."},
+ {n:"Egg coffee",w:"Egg coffee",c:"Vietnamese",v:"veg",f:["custardy","sweet"],t:"sip",note:"Hanoi's whipped-yolk coffee, like tiramisu in a cup. Rare and worth hunting."},
+ {n:"Hong Kong milk tea",w:"Hong Kong-style milk tea",c:"Chinese",v:"veg",f:["strong","silky"],t:"sip",note:"Silky black tea with evaporated milk."},
+ {n:"Mochi",w:"Mochi",c:"Japanese",v:"veg",f:["chewy","sweet"],t:"sip",note:"Chewy rice cake. Mochi ice cream is the easy win."}
+];
+
+// ── Starter spots (researched) ──
+const SEED=[
+ {name:"Pho Ninh Kieu",c:["Vietnamese"],addr:"77 New Rd, Parsippany, NJ",town:"Parsippany",p:1,why:"Highly rated local pho shop, $."},
+ {name:"Pho Binh Duong",c:["Vietnamese"],addr:"744 US-46, Parsippany, NJ",town:"Parsippany",p:1,why:"Budget pho and rice plates on Route 46."},
+ {name:"Saigon Subs & Café",c:["Vietnamese"],addr:"98 Elm St, Morristown, NJ",town:"Morristown",p:1,why:"Bánh mì and Vietnamese coffee; one of the best-rated in the area."},
+ {name:"Saigon Pho",c:["Vietnamese"],addr:"354 NJ-10, East Hanover, NJ",town:"East Hanover",p:1,why:"Quick pho stop on Route 10."},
+ {name:"Shan Shan Noodles",c:["Chinese"],addr:"Parsippany, NJ",town:"Parsippany",p:1,why:"Hand-pulled noodles, $."},
+ {name:"Noodle Wong",c:["Chinese"],addr:"Parsippany, NJ",town:"Parsippany",p:1,why:"Cheap noodle bowls."},
+ {name:"Qin Dynasty",c:["Chinese"],addr:"Parsippany, NJ",town:"Parsippany",p:2,why:"Sit-down Chinese in Parsippany."},
+ {name:"Ashia",c:["Chinese","Japanese"],addr:"Parsippany, NJ",town:"Parsippany",p:2,why:"Pan-Asian menu: Chinese plus sushi."},
+ {name:"Dao Madison",c:["Chinese"],addr:"Madison, NJ",town:"Madison",p:2,why:"One of the top-rated Chinese kitchens in Morris County."},
+ {name:"Hunan Taste",c:["Chinese"],addr:"Denville, NJ",town:"Denville",p:2,why:"Hunan and Sichuan heat, well-rated."},
+ {name:"Veggie Heaven",c:["Chinese"],addr:"Denville, NJ",town:"Denville",p:2,veg:true,why:"All-vegetarian Chinese: mock meats and tofu done right."},
+ {name:"Sushi Lounge",c:["Japanese"],addr:"Morristown, NJ",town:"Morristown",p:3,why:"Lively sushi bar, 4.7 on OpenTable."},
+ {name:"Ai-Sakae",c:["Japanese","Chinese"],addr:"970B Tabor Rd, Morris Plains, NJ",town:"Morris Plains",p:2,why:"Inventive plates like sushi pizza next to hibachi and Thai."},
+ {name:"Nami Nori",c:["Japanese"],addr:"Montclair, NJ",town:"Montclair",p:3,why:"Open-style temaki hand rolls, a creative take on sushi."},
+ {name:"The Morris Proper",c:["Farm"],addr:"M Station, Morristown, NJ",town:"Morristown",p:3,farm:true,isNew:true,why:"Farm-to-table, NJ-sourced menu from Ninety Acres' founding chef; opened July 2025."}
+];
+const TOWNS={Parsippany:[40.8579,-74.4257],Morristown:[40.7968,-74.4815],"East Hanover":[40.8201,-74.3646],Madison:[40.7598,-74.4171],Denville:[40.8923,-74.4874],Montclair:[40.8259,-74.2090],"Morris Plains":[40.8215,-74.4810]};
+
+const MODES=[
+ {k:"solo",ic:"🧳",l:"Solo & on the go",d:"Quick, counter-friendly, close by"},
+ {k:"work",ic:"💻",l:"Working",d:"Cafés, tea and somewhere to sit"},
+ {k:"quick",ic:"⚡",l:"Quick bite",d:"Fast, cheap, takeaway"},
+ {k:"treat",ic:"✨",l:"Treat myself",d:"$$–$$$, new or inventive"},
+ {k:"late",ic:"🌙",l:"Late night",d:"Open late"},
+ {k:"explore",ic:"🧭",l:"Exploring",d:"New, unusual, farm-to-table"}
+];
+
+// ── state ──
+let origin=HOME, mode=store.get("fa.mode","solo"), vegPref=store.get("fa.veg","both"), budget=store.get("fa.bud",2), radius=store.get("fa.rad",10);
+let cuisines=store.get("fa.cui",["Chinese","Vietnamese","Japanese","Farm"]);
+let likes=store.get("fa.likes",{}); // key -> 1 | -1
+let hist=store.get("fa.hist",[]);
+let pics=store.get("fa.pics.v1",{});
+let geoCache=store.get("fa.geo.v1",{});
+let spots=[], drive={}, sortBy="match", watchId=null, lastFetchAt=null;
+
+const BASE_W={Chinese:.8,Vietnamese:.8,Japanese:.8,Farm:.55,Fusion:.6};
+function profile(){
+  const w={...BASE_W}, flav={};
+  Object.entries(likes).forEach(([k,v])=>{
+    const [type,id]=k.split(":");
+    if(type==="d"){const d=DISHES.find(x=>x.n===id);if(!d)return;w[d.c]=(w[d.c]||.5)+.07*v;d.f.forEach(f=>flav[f]=(flav[f]||0)+v)}
+    if(type==="s"){const s=spots.find(x=>x.id===id)||SEED.find(x=>"seed-"+x.name===id);if(!s)return;(s.c||[]).forEach(c=>w[c]=(w[c]||.5)+.09*v)}
+  });
+  Object.keys(w).forEach(k=>w[k]=Math.max(.05,Math.min(1.2,w[k])));
+  return {w,flav};
+}
+
+// ── geo helpers ──
+function hav(a,b){const R=3958.8,r=x=>x*Math.PI/180,dl=r(b.lat-a.lat),dg=r(b.lng-a.lng);const h=Math.sin(dl/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+const walkMin=mi=>Math.round(mi*1.25*20); // ~3 mph, road factor
+const mapsUrl=s=>`https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${encodeURIComponent(s.name+", "+(s.addr||""))}&travelmode=driving`;
+const gSearch=q=>`https://www.google.com/maps/search/${encodeURIComponent(q)}/@${origin.lat},${origin.lng},14z`;
+
+// ── data: OpenStreetMap via Overpass (several mirrors) ──
+const OVERPASS=["https://overpass-api.de/api/interpreter","https://overpass.private.coffee/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
+async function overpass(lat,lng,meters){
+  const q=`[out:json][timeout:20];(nwr(around:${meters},${lat},${lng})["amenity"~"^(restaurant|cafe|fast_food|food_court)$"]["cuisine"~"chinese|vietnamese|japanese|sushi|ramen|noodle|dumpling|dim_sum|pho|bubble_tea|tea|asian|cantonese|sichuan|szechuan|izakaya|udon|banh",i];nwr(around:${meters},${lat},${lng})["amenity"~"^(restaurant|cafe)$"]["organic"~"yes|only"];nwr(around:${meters},${lat},${lng})["amenity"="restaurant"]["cuisine"~"farm|local|regional",i];);out center tags 250;`;
+  for(const ep of OVERPASS){
+    const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),14000);
+    try{const r=await fetch(ep,{method:"POST",body:"data="+encodeURIComponent(q),signal:ctl.signal});clearTimeout(t);
+      if(!r.ok)continue;const j=await r.json();return j.elements||[]}catch(e){clearTimeout(t)}
+  }
+  throw new Error("map servers busy");
+}
+function fromOSM(e){
+  const t=e.tags||{},lat=e.lat??e.center?.lat,lng=e.lon??e.center?.lon;if(!t.name||lat==null)return null;
+  const cu=(t.cuisine||"").toLowerCase(),c=[];
+  if(/chinese|cantonese|sichuan|szechuan|dim_sum|dumpling|hunan|taiwan/.test(cu))c.push("Chinese");
+  if(/vietnam|pho|banh/.test(cu))c.push("Vietnamese");
+  if(/japan|sushi|ramen|izakaya|udon|teriyaki/.test(cu))c.push("Japanese");
+  const farm=/yes|only/.test(t.organic||"")||/farm|local|regional/.test(cu)||/farm/i.test(t.name);
+  if(farm)c.push("Farm");
+  if(/bubble_tea|tea/.test(cu)&&!c.length)c.push("Fusion");
+  if(/asian|noodle/.test(cu)&&!c.length)c.push("Fusion");
+  if(!c.length)return null;
+  const am=t.amenity, p=am==="fast_food"||am==="cafe"||am==="food_court"?1:/\$\$\$|expensive/.test(t.price||"")?3:2;
+  const sd=t.start_date||t.opening_date||"";const yr=parseInt(sd);const isNew=yr&&(new Date().getFullYear()-yr)<=1;
+  const veg=/yes|only/.test(t["diet:vegetarian"]||"")||/yes|only/.test(t["diet:vegan"]||"");
+  const addr=[t["addr:housenumber"],t["addr:street"],t["addr:city"]].filter(Boolean).join(" ");
+  return {id:"osm-"+e.type+e.id,name:t.name,c,lat,lng,addr:addr||t["addr:city"]||"",town:t["addr:city"]||"",p,pEst:true,veg,vegOnly:t["diet:vegetarian"]==="only"||t["diet:vegan"]==="only",farm,isNew,
+    hours:t.opening_hours||"",web:t.website||t["contact:website"]||"",take:/yes|only/.test(t.takeaway||"")||am==="fast_food",amenity:am,wifi:/yes|wlan|free/.test(t.internet_access||""),cu:t.cuisine||"",src:"OpenStreetMap"};
+}
+function seedSpots(){
+  return SEED.map(s=>{const g=geoCache[s.addr];const tc=TOWNS[s.town]||[HOME.lat,HOME.lng];
+    return {id:"seed-"+s.name,name:s.name,c:s.c,lat:g?g[0]:tc[0],lng:g?g[1]:tc[1],approx:!g,addr:s.addr,town:s.town,p:s.p,veg:!!s.veg,vegOnly:!!s.veg,farm:!!s.farm,isNew:!!s.isNew,why:s.why,src:"Kiru's starter list",hours:"",web:"",take:s.p===1,amenity:s.p===1?"fast_food":"restaurant"}});
+}
+async function geocodeSeeds(){
+  for(const s of SEED){ if(geoCache[s.addr]||!/\d/.test(s.addr))continue;
+    try{const j=await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=${encodeURIComponent(s.addr)}`).then(r=>r.json());
+      if(j[0]){geoCache[s.addr]=[+j[0].lat,+j[0].lon];store.set("fa.geo.v1",geoCache)}}catch(e){}
+    await new Promise(r=>setTimeout(r,1100));
+  }
+}
+
+async function load(){
+  setStatus("load","Finding spots near "+origin.label+"…");
+  let live=[],err=null;
+  try{live=(await overpass(origin.lat,origin.lng,Math.round(Math.min(radius,20)*1609))).map(fromOSM).filter(Boolean)}catch(e){err=e}
+  const near=hav(origin,HOME)<40;
+  const seeds=near?seedSpots():[];
+  const names=new Set(live.map(s=>s.name.toLowerCase()));
+  spots=live.concat(seeds.filter(s=>!names.has(s.name.toLowerCase())));
+  lastFetchAt=new Date();
+  if(err&&!spots.length) setStatus("err",`The open map servers are busy right now, so no live spots loaded.`,true);
+  else if(err) setStatus("warn",`Showing your starter list. Live map data is busy; tap retry for more spots.`,true);
+  else setStatus("ok",`${live.length} live spots from OpenStreetMap${seeds.length?` + ${seeds.length} starter picks`:""} within ${radius} mi of ${origin.label}.`);
+  await route(); renderAll();
+}
+async function route(){
+  drive={};
+  const list=spots.filter(s=>hav(origin,s)<=radius+2).sort((a,b)=>hav(origin,a)-hav(origin,b)).slice(0,60);
+  if(!list.length)return;
+  const coords=[`${origin.lng},${origin.lat}`].concat(list.map(s=>`${s.lng},${s.lat}`)).join(";");
+  try{const j=await fetch(`https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=duration,distance`).then(r=>r.json());
+    if(j.code==="Ok")list.forEach((s,i)=>{const d=j.durations[0][i+1],m=j.distances[0][i+1];if(d!=null)drive[s.id]={min:Math.max(1,Math.round(d/60)),mi:m/1609.34}})}catch(e){}
+}
+function setStatus(kind,msg,retry){
+  $("#status").innerHTML=`${kind==="load"?'<i class="spin"></i>':kind==="ok"?"✅":kind==="warn"?"⚠️":"🛑"}<span>${esc(msg)}</span>${retry?`<button class="btn sm" id="retry">Retry</button><a class="btn sm" href="${gSearch("chinese vietnamese japanese restaurants")}" target="_blank" rel="noopener">Open in Google Maps</a>`:""}`;
+}
+
+// ── scoring ──
+function spotStats(s){const d=drive[s.id];const mi=d?d.mi:hav(origin,s)*1.25;return {mi,dmin:d?d.min:Math.round(mi/28*60+3),est:!d,wmin:walkMin(hav(origin,s))}}
+function passes(s){
+  const st=spotStats(s);
+  if(hav(origin,s)>radius)return false;
+  if(!s.c.some(c=>cuisines.includes(c)||(c==="Fusion")))return false;
+  if(s.p>budget)return false;
+  if(vegPref==="veg"&&!(s.veg||s.c.includes("Vietnamese")||s.c.includes("Chinese")||s.c.includes("Japanese")||s.farm))return false;
+  if(vegPref==="nonveg"&&s.vegOnly)return false;
+  if(likes["s:"+s.id]===-1)return false;
+  return st;
+}
+function score(s,P){
+  const st=spotStats(s), cw=Math.max(...s.c.map(c=>P.w[c]??.5));
+  let sc=cw*40 + Math.max(0,30-st.dmin)*0.9 + (s.p<=1?10:s.p===2?6:2);
+  if(vegPref==="veg"&&s.veg)sc+=12;
+  if(s.isNew)sc+=6; if(s.farm)sc+=4;
+  if(mode==="solo"&&(s.take||s.p===1))sc+=8;
+  if(mode==="quick"&&(s.amenity==="fast_food"||s.take))sc+=12;
+  if(mode==="work"&&(s.amenity==="cafe"||s.wifi||s.c.includes("Fusion")))sc+=14;
+  if(mode==="treat"&&s.p>=2)sc+=10;
+  if(mode==="late"&&/2[2-4]:|0[0-3]:|24\/7/.test(s.hours))sc+=14;
+  if(mode==="explore"&&(s.isNew||s.farm||s.vegOnly))sc+=12;
+  if(likes["s:"+s.id]===1)sc+=15;
+  return Math.max(1,Math.min(99,Math.round(sc)));
+}
+function dishScore(d,P){
+  let sc=(P.w[d.c]??.5)*55+d.f.reduce((a,f)=>a+(P.flav[f]||0)*6,0);
+  if(vegPref==="veg")sc+=d.v==="nonveg"?-40:d.v==="veg"?10:4;
+  if(vegPref==="nonveg"&&d.v==="veg"&&!d.t)sc-=10;
+  if(likes["d:"+d.n]===1)sc+=20; if(likes["d:"+d.n]===-1)sc-=60;
+  if(!cuisines.includes(d.c)&&d.c!=="Fusion")sc-=25;
+  return sc;
+}
+
+// ── images ──
+async function loadPics(){
+  const need=DISHES.filter(d=>!pics[d.w]).map(d=>d.w);
+  for(let i=0;i<need.length;i+=20){
+    try{const j=await fetch(`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=600&pilicense=any&titles=${encodeURIComponent(need.slice(i,i+20).join("|"))}`).then(r=>r.json());
+      const map={};(j.query.redirects||[]).forEach(r=>map[r.to]=r.from);(j.query.normalized||[]).forEach(r=>map[r.to]=map[r.to]||r.from);
+      Object.values(j.query.pages).forEach(p=>{if(p.thumbnail){const key=need.includes(p.title)?p.title:map[p.title]&&need.includes(map[p.title])?map[p.title]:null;if(key)pics[key]=p.thumbnail.source}});
+      store.set("fa.pics.v1",pics);
+    }catch(e){}
+  }
+  document.querySelectorAll("img[data-w]").forEach(paint);
+}
+function paint(img){const src=pics[img.dataset.w];if(src&&img.src!==src){img.onload=()=>img.classList.add("ok");img.src=src}}
+const dishFor=s=>{const c=s.c.find(x=>x!=="Farm")||"Fusion";const pool=DISHES.filter(d=>d.c===c&&!d.t);if(!pool.length)return DISHES.find(d=>d.n==="Gua bao");let h=0;for(const ch of s.name)h=(h*31+ch.charCodeAt(0))>>>0;return pool[h%pool.length]};
+
+// ── render ──
+const vt=v=>v==="veg"?'<span class="tag veg">Veg</span>':v==="nonveg"?'<span class="tag nv">Non-veg</span>':'<span class="tag both">Veg option</span>';
+function dishCard(d){const L=likes["d:"+d.n]||0;
+  return `<article class="dish"><div class="img"><span class="emo" aria-hidden="true">${CEMO[d.c]}</span><img alt="${esc(d.n)}" data-w="${esc(d.w)}" ${pics[d.w]?`src="${esc(pics[d.w])}" class="ok"`:""}></div>
+   <div class="tags">${vt(d.v)}${d.t?'<span class="tag">Sip & sweet</span>':""}</div>
+   <div class="bd"><div class="cz" style="color:${CZ[d.c]}">${d.c}</div><h3>${esc(d.n)}</h3><p>${esc(d.note)}</p>
+   <div class="flav">${d.f.map(f=>`<span>${f}</span>`).join("")}</div>
+   <div class="react"><button class="yum" data-like="d:${esc(d.n)}" data-v="1" aria-pressed="${L===1}" aria-label="I like ${esc(d.n)}">😋</button><button class="nah" data-like="d:${esc(d.n)}" data-v="-1" aria-pressed="${L===-1}" aria-label="Not for me">🙅</button><button class="find" data-find="${esc(d.n)}" aria-label="Find ${esc(d.n)} nearby">📍 Find</button></div></div></article>`}
+function spotCard(s,P){const st=spotStats(s),d=dishFor(s),m=score(s,P),L=likes["s:"+s.id]||0;
+  const price="$".repeat(s.p)+(s.pEst?" est.":"");
+  return `<article class="spot"><div class="ban"><img alt="" data-w="${esc(d.w)}" ${pics[d.w]?`src="${esc(pics[d.w])}" class="ok"`:""}>
+    <span class="match" title="Match for you">${m}% match</span>
+    <div class="tags">${s.isNew?'<span class="tag new">New</span>':""}${s.farm?'<span class="tag farm">Farm-to-table</span>':""}${s.vegOnly?'<span class="tag veg">All veg</span>':s.veg?'<span class="tag veg">Veg-friendly</span>':""}${s.p===1?'<span class="tag cheap">Budget</span>':""}</div></div>
+   <div class="bd"><h3>${esc(s.name)}</h3><div class="meta">${s.c.map(c=>`<b style="color:${CZ[c]}">${c}</b>`).join(" · ")} · ${price}${s.town?" · "+esc(s.town):""}</div>
+   ${s.why?`<p class="why">${esc(s.why)}</p>`:s.cu?`<p class="why">Serves: ${esc(s.cu.replace(/;/g,", ").replace(/_/g," "))}</p>`:""}
+   <div class="dist"><span class="drv">🚗 ${st.est?"~":""}${st.dmin} min · ${st.mi.toFixed(1)} mi</span>${st.wmin<=45?`<span class="wlk">🚶 ~${st.wmin} min</span>`:""}</div>
+   <div class="acts"><a class="btn sm jade" href="${mapsUrl(s)}" target="_blank" rel="noopener">Directions</a>${s.web?`<a class="btn sm" href="${esc(s.web)}" target="_blank" rel="noopener">Menu</a>`:""}
+    <button class="btn sm" data-like="s:${esc(s.id)}" data-v="1" aria-pressed="${L===1}">😋</button><button class="btn sm" data-like="s:${esc(s.id)}" data-v="-1" aria-pressed="false" aria-label="Hide this spot">🙅</button></div>
+   <div class="src">${s.approx?"Approximate location · ":""}${esc(s.src)}</div></div></article>`}
+
+function renderAll(){
+  const P=profile();
+  // dishes rail (auto-scroll, duplicated for loop)
+  const ds=[...DISHES.filter(d=>!d.t)].sort((a,b)=>dishScore(b,P)-dishScore(a,P)).filter(d=>dishScore(d,P)>-10);
+  $("#trackDish").innerHTML=ds.concat(ds).map(dishCard).join("");
+  $("#trackSip").innerHTML=DISHES.filter(d=>d.t).sort((a,b)=>dishScore(b,P)-dishScore(a,P)).map(dishCard).join("");
+  const ok=spots.filter(passes);
+  const near=[...ok].sort((a,b)=>spotStats(a).dmin-spotStats(b).dmin).slice(0,14);
+  $("#trackNear").innerHTML=near.length?near.map(s=>spotCard(s,P)).join(""):`<div class="empty">No spots match yet. Widen the radius or tap more cuisines.</div>`;
+  const nw=ok.filter(s=>s.isNew||s.p===1).sort((a,b)=>(b.isNew-a.isNew)||score(b,P)-score(a,P)).slice(0,14);
+  $("#trackNew").innerHTML=nw.length?nw.map(s=>spotCard(s,P)).join(""):`<div class="empty">No new or $ spots in range.</div>`;
+  const fm=ok.filter(s=>s.farm||s.veg).sort((a,b)=>score(b,P)-score(a,P)).slice(0,14);
+  $("#trackFarm").innerHTML=fm.length?fm.map(s=>spotCard(s,P)).join(""):`<div class="empty">No farm-to-table or veg-forward spots tagged in range. <a href="${gSearch("farm to table restaurant")}" target="_blank" rel="noopener">Search Google Maps</a></div>`;
+  const all=[...ok].sort((a,b)=>sortBy==="drive"?spotStats(a).dmin-spotStats(b).dmin:sortBy==="price"?a.p-b.p||spotStats(a).dmin-spotStats(b).dmin:sortBy==="name"?a.name.localeCompare(b.name):score(b,P)-score(a,P));
+  $("#grid").innerHTML=all.length?all.map(s=>spotCard(s,P)).join(""):`<div class="empty">Nothing fits these filters yet.</div>`;
+  $("#allSub").textContent=`${all.length} spot${all.length===1?"":"s"} within ${radius} mi · ${MODES.find(m=>m.k===mode).l}`;
+  renderDNA(P);
+  document.querySelectorAll("img[data-w]").forEach(paint);
+}
+function renderDNA(P){
+  const ent=Object.entries(P.w).filter(([k])=>k in CZ).sort((a,b)=>b[1]-a[1]),tot=ent.reduce((a,[,v])=>a+v,0);let acc=0;
+  $("#donut").style.background=`conic-gradient(${ent.map(([k,v])=>{const s=acc;acc+=v/tot*100;return `${CZ[k]} ${s}% ${acc}%`}).join(",")})`;
+  const top=ent[0];$("#donut").dataset.c=`${CEMO[top[0]]}\n${top[0]}`;
+  $("#legend").innerHTML=ent.map(([k,v])=>`<div><i style="background:${CZ[k]}"></i>${k}<span>${Math.round(v/tot*100)}%</span></div>`).join("");
+  const fl=Object.entries(P.flav).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,7),mx=Math.max(1,...fl.map(f=>f[1]));
+  $("#flavors").innerHTML=fl.length?fl.map(([f,v])=>`<div class="hb"><span class="nm">${f}</span><div class="tr"><div class="fl" style="width:${v/mx*100}%"></div></div><span class="v">${v}</span></div>`).join(""):`<div class="empty" style="padding:16px">Tap 😋 on a few dishes and your flavor map appears here.</div>`;
+  $("#hist").innerHTML=hist.length?hist.slice(0,30).map(h=>`<div><b>${h.v===1?"😋":h.v===-1?"🙅":"🧭"} ${esc(h.n)}</b><span>${new Date(h.t).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</span></div>`).join(""):`<div class="empty" style="padding:16px">Nothing yet. Your reactions show up here.</div>`;
+}
+
+// ── search with auto-suggest ──
+const SUG=()=>[...DISHES.map(d=>({k:"Dish",l:d.n,w:d.w,act:()=>openFind(d.n)})),
+  ...["Chinese","Vietnamese","Japanese","Farm"].map(c=>({k:"Cuisine",l:c,emo:CEMO[c],act:()=>{cuisines=[c];syncSegs();save();renderAll();toast("Showing "+c+" only")}})),
+  ...MODES.map(m=>({k:"Mood",l:m.l,emo:m.ic,act:()=>setMode(m.k)})),
+  {k:"Filter",l:"Vegetarian only",emo:"🥬",act:()=>{vegPref="veg";syncSegs();save();renderAll()}},
+  {k:"Filter",l:"Budget ($)",emo:"💸",act:()=>{budget=1;syncSegs();save();renderAll()}},
+  ...spots.map(s=>({k:"Spot",l:s.name,emo:CEMO[s.c[0]],sub:s.town,act:()=>window.open(mapsUrl(s),"_blank","noopener")}))];
+const FLAVQ={spicy:["Mapo tofu","Dan dan noodles"],soup:["Pho","Ramen","Xiaolongbao"],crispy:["Scallion pancake","Bánh xèo","Peking duck"],sweet:["Mochi","Bubble tea"],coffee:["Vietnamese iced coffee","Egg coffee"],tea:["Matcha latte","Bubble tea","Hong Kong milk tea"],noodle:["Pho","Ramen","Dan dan noodles","Bún chả"],veg:["Scallion pancake","Gỏi cuốn","Onigiri"]};
+let sgItems=[],sgIdx=-1;
+function suggest(v){
+  const q=v.trim().toLowerCase(),box=$("#suggest");
+  if(!q){box.hidden=true;$("#q").setAttribute("aria-expanded","false");return}
+  const extra=Object.entries(FLAVQ).filter(([k])=>k.startsWith(q)).flatMap(([,ns])=>ns);
+  sgItems=SUG().filter(s=>s.l.toLowerCase().includes(q)||extra.includes(s.l)).slice(0,9);
+  sgIdx=-1;
+  box.innerHTML=sgItems.length?sgItems.map((s,i)=>`<div class="sg" role="option" id="sg${i}" data-i="${i}" aria-selected="false">${s.w&&pics[s.w]?`<img src="${esc(pics[s.w])}" alt="">`:`<span class="ph" style="display:grid;place-items:center;font-size:20px">${s.emo||"🍽️"}</span>`}<span><b>${esc(s.l)}</b>${s.sub?`<br><small style="color:var(--ink-3)">${esc(s.sub)}</small>`:""}</span><span class="k">${s.k}</span></div>`).join("")
+    :`<div class="sg" data-i="-1"><span class="ph" style="display:grid;place-items:center">🔎</span><span>Search Google Maps for “${esc(v)}” near you</span><span class="k">Maps</span></div>`;
+  box.hidden=false;$("#q").setAttribute("aria-expanded","true");
+}
+function pick(i){const box=$("#suggest");box.hidden=true;$("#q").setAttribute("aria-expanded","false");
+  if(i<0||!sgItems[i]){window.open(gSearch($("#q").value),"_blank","noopener");return}
+  sgItems[i].act();$("#q").value=sgItems[i].l}
+$("#q").addEventListener("input",e=>suggest(e.target.value));
+$("#q").addEventListener("keydown",e=>{const n=sgItems.length;if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();if(!n)return;sgIdx=(sgIdx+(e.key==="ArrowDown"?1:-1)+n)%n;
+  document.querySelectorAll(".sg").forEach((el,i)=>el.setAttribute("aria-selected",i===sgIdx));$("#q").setAttribute("aria-activedescendant","sg"+sgIdx);document.getElementById("sg"+sgIdx)?.scrollIntoView({block:"nearest"})}
+  if(e.key==="Enter"){e.preventDefault();pick(sgIdx>=0?sgIdx:(n?0:-1))} if(e.key==="Escape"){$("#suggest").hidden=true}});
+$("#suggest").addEventListener("mousedown",e=>{const el=e.target.closest(".sg");if(el){e.preventDefault();pick(+el.dataset.i)}});
+$("#q").addEventListener("blur",()=>setTimeout(()=>$("#suggest").hidden=true,150));
+function openFind(name){window.open(gSearch(name),"_blank","noopener");toast("Opening "+name+" near you in Google Maps")}
+
+// ── surprise wheel ──
+let spun=0;
+function surprise(){
+  const P=profile(),ok=spots.filter(passes);
+  const ds=DISHES.filter(d=>!d.t&&dishScore(d,P)>0);
+  if(!ds.length){toast("Loosen a filter first");return}
+  const weighted=ds.flatMap(d=>Array(Math.max(1,Math.round(dishScore(d,P)/15))).fill(d));
+  const d=weighted[Math.floor(Math.random()*weighted.length)];
+  const sp=ok.filter(s=>s.c.includes(d.c)).sort((a,b)=>score(b,P)-score(a,P)).slice(0,4);
+  const s=sp[Math.floor(Math.random()*sp.length)];
+  const segs=["Chinese","Vietnamese","Japanese","Fusion"],cols=segs.map(c=>CZ[c]);
+  const w=$("#wheel");w.style.background=`conic-gradient(${cols.map((c,i)=>`${c} ${i*25}% ${(i+1)*25}%`).join(",")})`;
+  const seg=Math.max(0,segs.indexOf(d.c));spun+=1440+(360-(seg*90+45));
+  $("#reveal").classList.remove("on");$("#reveal").innerHTML="";
+  $("#sdlg").showModal();requestAnimationFrame(()=>w.style.transform=`rotate(${spun}deg)`);
+  setTimeout(()=>{
+    $("#reveal").innerHTML=`<img alt="${esc(d.n)}" src="${esc(pics[d.w]||"")}" ${pics[d.w]?"":"hidden"}><h3 id="sTitle">${esc(d.n)}</h3><p style="margin:0 0 6px;color:var(--ink-2)">${esc(d.note)}</p>
+     ${s?`<p style="margin:0 0 12px">Try it at <b>${esc(s.name)}</b> · ${spotStats(s).est?"~":""}${spotStats(s).dmin} min away</p>`:`<p style="margin:0 0 12px;color:var(--ink-3)">No ${d.c} spot in range yet. Search nearby instead.</p>`}
+     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${s?`<a class="btn jade" href="${mapsUrl(s)}" target="_blank" rel="noopener">Take me there</a>`:`<a class="btn jade" href="${gSearch(d.n)}" target="_blank" rel="noopener">Find nearby</a>`}<button class="btn" id="again">🎲 Spin again</button><button class="btn" data-like="d:${esc(d.n)}" data-v="1">😋 Love it</button></div>`;
+    $("#reveal").classList.add("on");
+  },matchMedia("(prefers-reduced-motion: reduce)").matches?50:2700);
+}
+$("#surpriseBtn").addEventListener("click",surprise);
+$("#sdlg").addEventListener("click",e=>{if(e.target.id==="sdlg"||e.target.id==="sClose")$("#sdlg").close();if(e.target.id==="again")surprise()});
+
+// ── controls ──
+function save(){store.set("fa.mode",mode);store.set("fa.veg",vegPref);store.set("fa.bud",budget);store.set("fa.rad",radius);store.set("fa.cui",cuisines)}
+function syncSegs(){
+  document.querySelectorAll("#vegSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.veg===vegPref));
+  document.querySelectorAll("#budSeg button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.b===budget));
+  document.querySelectorAll("#cuiSeg button").forEach(b=>b.setAttribute("aria-pressed",cuisines.includes(b.dataset.c)));
+  document.querySelectorAll(".mode").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===mode));
+  $("#rad").value=radius;$("#radV").textContent=radius;
+}
+function setMode(k){mode=k;hist.unshift({n:"Mode: "+MODES.find(m=>m.k===k).l,v:0,t:Date.now()});hist=hist.slice(0,60);store.set("fa.hist",hist);
+  if(k==="quick"||k==="solo")budget=Math.min(budget,2);syncSegs();save();renderAll();toast(MODES.find(m=>m.k===k).l+": picks re-ranked")}
+$("#modes").innerHTML=MODES.map(m=>`<button class="mode" data-m="${m.k}" aria-pressed="${m.k===mode}" title="${m.d}"><span class="ic" aria-hidden="true">${m.ic}</span>${m.l}</button>`).join("");
+document.addEventListener("click",e=>{
+  const md=e.target.closest(".mode");if(md){setMode(md.dataset.m);return}
+  const vg=e.target.closest("#vegSeg button");if(vg){vegPref=vg.dataset.veg;syncSegs();save();renderAll();return}
+  const bd=e.target.closest("#budSeg button");if(bd){budget=+bd.dataset.b;syncSegs();save();renderAll();return}
+  const cu=e.target.closest("#cuiSeg button");if(cu){const c=cu.dataset.c;cuisines=cuisines.includes(c)?cuisines.filter(x=>x!==c):cuisines.concat(c);if(!cuisines.length)cuisines=[c];syncSegs();save();renderAll();return}
+  const lk=e.target.closest("[data-like]");if(lk){const k=lk.dataset.like,v=+lk.dataset.v;const was=likes[k];if(was===v)delete likes[k];else likes[k]=v;
+    const name=k.startsWith("d:")?k.slice(2):(spots.find(s=>s.id===k.slice(2))||{name:k.slice(2)}).name;
+    if(likes[k]){hist.unshift({n:name,v,t:Date.now()});hist=hist.slice(0,60);store.set("fa.hist",hist)}
+    store.set("fa.likes",likes);toast(likes[k]===1?`😋 Noted: more like ${name}`:likes[k]===-1?(k.startsWith("s:")?`Hidden ${name}`:`🙅 Fewer like ${name}`):"Cleared");renderAll();return}
+  const fd=e.target.closest("[data-find]");if(fd){openFind(fd.dataset.find);return}
+  const sc=e.target.closest("[data-scroll]");if(sc){const t=document.getElementById(sc.dataset.scroll);t.scrollBy({left:+sc.dataset.d*t.clientWidth*.8});return}
+  if(e.target.id==="retry"){load();return}
+  if(e.target.id==="resetTaste"){likes={};hist=[];store.set("fa.likes",{});store.set("fa.hist",[]);renderAll();toast("Taste profile reset to your starting favourites");return}
+});
+$("#rad").addEventListener("input",e=>{$("#radV").textContent=e.target.value});
+$("#rad").addEventListener("change",e=>{radius=+e.target.value;save();load()});
+$("#sort").addEventListener("change",e=>{sortBy=e.target.value;renderAll()});
+
+// ── location: one-shot, then follow while travelling ──
+$("#locBtn").addEventListener("click",()=>{
+  if(!navigator.geolocation){toast("Location isn't available in this browser");return}
+  if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null;$("#locBtn").textContent="Use my location";$("#dot").classList.remove("live");toast("Stopped following your location");return}
+  $("#locBtn").textContent="Locating…";
+  watchId=navigator.geolocation.watchPosition(p=>{
+    const next={lat:p.coords.latitude,lng:p.coords.longitude,label:"you"};
+    const moved=hav(origin,next);
+    $("#dot").classList.add("live");$("#locBtn").textContent="Stop following";
+    $("#locText").textContent=`Following you · ±${Math.round(p.coords.accuracy)} m`;
+    const first=origin.label!=="you";
+    if(first||moved>0.6){origin=next;load();toast(first?"Using your live location":"You moved, refreshing spots near you")}
+  },err=>{watchId=null;$("#locBtn").textContent="Use my location";toast(err.code===1?"Location blocked. Allow it in your browser's site settings.":"Couldn't get your location.")},{enableHighAccuracy:true,maximumAge:30000,timeout:15000});
+});
+
+// auto-scroll the flavors rail
+(function(){const t=$("#trackDish");let paused=false,x=0;if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  ["mouseenter","touchstart","focusin"].forEach(ev=>t.addEventListener(ev,()=>paused=true,{passive:true}));
+  ["mouseleave","touchend","focusout"].forEach(ev=>t.addEventListener(ev,()=>setTimeout(()=>paused=false,1500),{passive:true}));
+  function step(){if(!paused&&t.scrollWidth>t.clientWidth){t.style.scrollBehavior="auto";t.scrollLeft+=0.6;if(t.scrollLeft>=t.scrollWidth/2)t.scrollLeft=0;t.style.scrollBehavior=""}requestAnimationFrame(step)}
+  requestAnimationFrame(step)})();
+
+syncSegs();spots=seedSpots();renderAll();loadPics();load();geocodeSeeds().then(()=>{if(origin===HOME){spots=spots.map(s=>{if(!s.id.startsWith("seed-"))return s;const g=geoCache[s.addr];return g?{...s,lat:g[0],lng:g[1],approx:false}:s});route().then(renderAll)}});
+})();
+</script>
+</body>
+</html>
